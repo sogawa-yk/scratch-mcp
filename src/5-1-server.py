@@ -44,7 +44,7 @@ def main():
                         "jsonrpc": "2.0",
                         "id": request["id"],
                         "result": {
-                            "protocolVersion": "2024-11-05",
+                            "protocolVersion": "2025-11-25",
                             "capabilities": {
                                 "resources": {},
                                 "tools": {},

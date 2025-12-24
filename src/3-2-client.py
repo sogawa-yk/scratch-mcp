@@ -117,7 +117,7 @@ class MCPClient:
             print("Sending 'initialize'...")
             # initializeも同期リクエストにする（結果を受け取る）
             init_result = self.send_request("initialize", {
-                "protocolVersion": "2024-11-05", 
+                "protocolVersion": "2025-11-25", 
                 "capabilities": {}, 
                 "clientInfo": {"name": "my-client", "version": "1.0"}
             })

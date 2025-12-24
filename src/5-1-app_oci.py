@@ -134,7 +134,7 @@ def main():
     
     try:
         mcp_client.send_request("initialize", {
-            "protocolVersion": "2024-11-05", 
+            "protocolVersion": "2025-11-25", 
             "capabilities": {}, 
             "clientInfo": {"name": "oci-genai-client-prompts", "version": "1.0"}
         })

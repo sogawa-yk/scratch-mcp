@@ -197,7 +197,7 @@ def main():
     try:
         # Handshake
         mcp_client.send_request("initialize", {
-            "protocolVersion": "2024-11-05", 
+            "protocolVersion": "2025-11-25", 
             "capabilities": {}, 
             "clientInfo": {"name": "oci-genai-client", "version": "1.0"}
         })

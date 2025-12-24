@@ -79,7 +79,7 @@ def run_chat_loop():
         # --- Handshake ---
         print("[System] Sending 'initialize'...")
         init_result = client.send_request("initialize", {
-            "protocolVersion": "2024-11-05", 
+            "protocolVersion": "2025-11-25", 
             "capabilities": {}, 
             "clientInfo": {"name": "mock-llm-client", "version": "1.0"}
         })
