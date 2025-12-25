@@ -6,11 +6,11 @@ import time
 import importlib.util
 
 # ---------------------------------------------------------
-# Import MCPClient from '3-2-client.py'
+# Import MCPClient from '4-2-client.py'
 # Since the filename has hyphens, we use importlib.
 # ---------------------------------------------------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
-client_module_path = os.path.join(current_dir, "3-2-client.py")
+client_module_path = os.path.join(current_dir, "4-2-client.py")
 
 spec = importlib.util.spec_from_file_location("mcp_client_module", client_module_path)
 mcp_client_module = importlib.util.module_from_spec(spec)
@@ -59,13 +59,13 @@ def run_chat_loop():
     client = MCPClient()
     
     # Run client in a separate thread so we can interact with it here? 
-    # MCPClient in 3-2-client.py starts its own reader thread and subprocess.
+    # MCPClient in 4-2-client.py starts its own reader thread and subprocess.
     # However, its 'run()' method is a blocking one that does the handshake and then waits.
     # We need to manually do the handshake steps here instead of calling client.run(),
     # because client.run() contains a sample execution that we don't want to repeat exactly,
     # OR we need to modify how we use it.
     
-    # 3-2-client.py's `run` method does: 
+    # 4-2-client.py's `run` method does: 
     # 1. Initialize
     # 2. Initialized NOTIFICATION
     # 3. Ping

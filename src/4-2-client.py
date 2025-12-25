@@ -6,8 +6,8 @@ import time
 import os
 import concurrent.futures
 
-# Use the server from Step 2-3
-SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "2-3-server.py")
+# Use the server from Step 3-1
+SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "3-1-server.py")
 
 class MCPClient:
     def __init__(self):

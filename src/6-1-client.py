@@ -5,8 +5,8 @@ import threading
 import os
 import concurrent.futures
 
-# Use the server from Step 5-1
-SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "5-1-server.py")
+# Use the server from Step 6-1
+SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "6-1-server.py")
 
 class MCPClient:
     def __init__(self):

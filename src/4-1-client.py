@@ -5,8 +5,8 @@ import threading
 import time
 import os
 
-# Use the server from Step 2-3
-SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "2-3-server.py")
+# Use the server from Step 3-1
+SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "3-1-server.py")
 
 class MCPClient:
     def __init__(self):
@@ -83,7 +83,7 @@ class MCPClient:
             "clientInfo": {"name": "my-client", "version": "1.0"}
         })
         
-        # Wait a bit for response (Basic implementation for Step 3-1)
+        # Wait a bit for response (Basic implementation for Step 4-1)
         time.sleep(1)
         
         # 2. Initialized
