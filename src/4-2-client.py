@@ -44,7 +44,6 @@ class MCPClient:
                             future = self._pending_requests[request_id]
                             if not future.done():
                                 future.set_result(data)
-                            # 処理済みなのでprintしない（あるいはデバッグ用に控えめに出す）
                         else:
                             print(f"[Warn] Received response for unknown ID: {request_id}")
                     

@@ -4,7 +4,7 @@ import os
 import json
 
 def test_tools():
-    server_path = os.path.join(os.path.dirname(__file__), '../src/2-3-server.py')
+    server_path = os.path.join(os.path.dirname(__file__), '../src/3-1-server.py')
     
     # 1. Initialize (Check capabilities)
     init_request = {

@@ -4,7 +4,7 @@ import os
 
 def test_server_io():
     # Path to the server script
-    server_path = os.path.join(os.path.dirname(__file__), '../src/server.py')
+    server_path = os.path.join(os.path.dirname(__file__), '../src/1-1-server.py')
     
     # Input to send
     input_text = "Hello MCP\nTesting 123\n"
