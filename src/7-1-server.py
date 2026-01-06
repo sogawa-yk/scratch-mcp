@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+import uuid
+import subprocess
 
 # 1. Configuration
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
@@ -73,7 +75,20 @@ class MCPServer:
         sys.stdout.flush()
 
     def handle_request(self, request):
+        # NOTE: If 'method' is missing in a response (from client), it's not a request.
+        # But here server mostly receives requests, except for sampling responses (handled in request_sampling hack).
+        # Actually proper async handling would separate this. 
+        # For this simplified sync implementation, 'handle_request' is only for 'incoming requests' from client.
+        # The 'request_sampling' method below does its own read loop for the specific response.
+        
         method = request.get("method")
+        
+        # If no method, it might be a response to our sampling request, but 
+        # in the 'request_sampling' simplified model, we catch it there.
+        # If it falls through here, it might be a stray response or error.
+        if not method and "id" in request:
+             # Just ignore or log stray responses
+            return
 
         if "id" in request: # IDがある場合はRequestとして扱う
             request_id = request.get("id") 
@@ -188,22 +203,105 @@ class MCPServer:
                         },
                         "required": ["a", "b"]
                     }
+                },
+                {
+                    "name": "execute_shell_task",
+                    "description": "Generate and execute a safe bash one-liner for a given instruction using MCP Sampling.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "instruction": { "type": "string" }
+                        },
+                        "required": ["instruction"]
+                    }
                 }
             ]
         }
         self.send_response(request_id, result=result)
+
+    # --- Sampling Feature ---
+    def request_sampling(self, prompt_text, system_prompt=None):
+        """
+        Send a sampling request to the client and wait for the response.
+        Note: This blocks the server loop, which is fine for this tutorial but
+        bad for production (needs async).
+        """
+        request_id = str(uuid.uuid4())
+        params = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {
+                        "type": "text",
+                        "text": prompt_text
+                    }
+                }
+            ],
+            "maxTokens": 100
+        }
+        if system_prompt:
+            params["systemPrompt"] = system_prompt
+
+        request = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "sampling/createMessage",
+            "params": params
+        }
+        
+        # Send Request
+        sys.stdout.write(json.dumps(request) + "\n")
+        sys.stdout.flush()
+        
+        # Wait for Response (Blocking)
+        # We need to read from stdin until we find the response with our ID
+        # WARNING: This logic steals input from the main 'run' loop.
+        # Ideally we'd use a shared queue, but for simplicity here we assume 
+        # this is the only activity happening during tool execution.
+        try:
+            while True:
+                line = sys.stdin.readline()
+                if not line: break
+                
+                try:
+                    data = json.loads(line)
+                    # Check if this is the response to our sampling request
+                    if "id" in data and str(data["id"]) == request_id:
+                        if "error" in data:
+                            raise Exception(f"Sampling error: {data['error']}")
+                        
+                        # Extract content
+                        result = data.get("result", {})
+                        content = result.get("content", {})
+                        if isinstance(content, dict) and content.get("type") == "text":
+                            return content.get("text")
+                        # Some implementations might return a list of contents
+                        if isinstance(content, list) and len(content) > 0:
+                             return content[0].get("text")
+                             
+                        return "Error: No text in content"
+                    
+                    # If it's NOT our response, it might be another request or notification.
+                    # In a real server, we should handle or queue it. 
+                    # Here, we drop it to avoid infinite recursion complexity in this demo.
+                    print(f"debug: Dropped message during sampling wait: {line}", file=sys.stderr)
+                    
+                except json.JSONDecodeError:
+                    pass
+        except Exception as e:
+            return f"Error during sampling: {str(e)}"
+        
+        return "Error: Sampling timed out or disconnected"
 
     def handle_tools_call(self, request_id, params):
         name = params.get("name")
         arguments = params.get("arguments", {})
         
         if name == "add_numbers":
-            # Notification: Notify client that we are about to calculate
             self.send_notification("notifications/message", {
                 "level": "info",
                 "data": f"Tool 'add_numbers' was called with arguments: {arguments}"
             })
-
             try:
                 a = arguments.get("a")
                 b = arguments.get("b")
@@ -217,6 +315,60 @@ class MCPServer:
                     "content": [{ "type": "text", "text": f"Error: {str(e)}" }],
                     "isError": True
                 })
+
+        elif name == "execute_shell_task":
+            self.send_notification("notifications/message", {
+                "level": "info",
+                "data": f"Tool 'execute_shell_task' called."
+            })
+            try:
+                instruction = arguments.get("instruction")
+                if not instruction: raise ValueError("Missing argument 'instruction'")
+
+                # 1. Sampling
+                system_prompt = (
+                    "あなたはLinuxシェルの専門家です。"
+                    "以下の指示を安全に実行できるワンライナーのbashコマンドに変換してください。"
+                    "解説やMarkdownは不要で、コマンド文字列のみを返してください。\n"
+                    "危険なコマンド(rm -rf /等)は拒否してください。"
+                )
+                user_message = f"指示: {instruction}"
+                
+                generated_command = self.request_sampling(user_message, system_prompt)
+                generated_command = generated_command.strip()
+
+                # Safety check (simplified)
+                if "Error" in generated_command:
+                     raise Exception(generated_command)
+                
+                self.send_notification("notifications/message", {
+                     "level": "info",
+                     "data": f"Executing command: {generated_command}"
+                })
+
+                # 2. Execution
+                exec_result = subprocess.run(
+                    generated_command, 
+                    shell=True, 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=10
+                )
+                
+                # 3. Formatter
+                status = "success" if exec_result.returncode == 0 else "error"
+                output = f"Stdout: {exec_result.stdout}\nStderr: {exec_result.stderr}"
+                
+                self.send_response(request_id, result={
+                    "content": [{ "type": "text", "text": f"{status.upper()}: {output}" }]
+                })
+
+            except Exception as e:
+                 self.send_response(request_id, result={
+                    "content": [{ "type": "text", "text": f"Error: {str(e)}" }],
+                    "isError": True
+                })
+
         else:
              self.send_response(request_id, result={
                 "content": [{ "type": "text", "text": f"Error: Unknown tool {name}" }],
